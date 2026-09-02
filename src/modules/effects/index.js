@@ -21,10 +21,10 @@ const dayFactor = (h) => smoothstep(5.5, 7.5, h) * (1 - smoothstep(18, 20, h));
 const goldenFactor = (h) => Math.max(Math.exp(-((h - 7.0) ** 2) / 0.9), Math.exp(-((h - 18.4) ** 2) / 0.9));
 
 const DEFAULTS = {
-  bloomStrength: 0.35, bloomRadius: 0.6, bloomThreshold: 1.0,
+  bloomStrength: 0.35, bloomRadius: 0.45, bloomThreshold: 1.0, bloomClamp: 6.0,
   aoIntensity: 1.0, aoRadius: 4.0,
   vignette: 0.28, grain: 0.03, aberration: 0.0012, grade: 1.0, saturation: 1.04,
-  raysIntensity: 0.55,
+  raysIntensity: 0.4,
 };
 const PASS_NAMES = ['ao', 'bloom', 'rays', 'smaa', 'grade'];
 
@@ -92,6 +92,12 @@ function build() {
   }
   P.bloom = new UnrealBloomPass(new THREE.Vector2(Math.max(1, W >> 1), Math.max(1, H >> 1)), S.params.bloomStrength, S.params.bloomRadius, S.params.bloomThreshold);
   P.bloom.highPassUniforms.smoothWidth.value = 0.15;
+  // clamp the bright-pass input: the sun disc / specular pings are hundreds of nits and would halo the whole frame
+  P.bloom.highPassUniforms.bloomClamp = { value: S.params.bloomClamp };
+  P.bloom.materialHighPassFilter.fragmentShader = P.bloom.materialHighPassFilter.fragmentShader
+    .replace('uniform float smoothWidth;', 'uniform float smoothWidth; uniform float bloomClamp;')
+    .replace('gl_FragColor = mix( outputColor, texel, alpha );', 'texel.rgb = min( texel.rgb, vec3( bloomClamp ) ); gl_FragColor = mix( outputColor, texel, alpha );');
+  P.bloom.materialHighPassFilter.needsUpdate = true;
   composer.addPass(P.bloom);
   if (high) { P.rays = new RaysPass(P.render, camera, W, H, 0.25); composer.addPass(P.rays); }
   P.output = new OutputPass(); composer.addPass(P.output);
@@ -123,7 +129,7 @@ function applyParams() {
   const P = S.passes, p = S.params; if (!S.composer) return;
   if (P.ao?.kind === 'gtao') { P.ao.blendIntensity = p.aoIntensity; P.ao.updateGtaoMaterial({ radius: p.aoRadius }); }
   else if (P.ao) P.ao.params.saoIntensity = 0.02 * p.aoIntensity;
-  P.bloom.radius = p.bloomRadius;
+  P.bloom.radius = p.bloomRadius; if (P.bloom.highPassUniforms.bloomClamp) P.bloom.highPassUniforms.bloomClamp.value = p.bloomClamp;
   const g = P.grade.uniforms;
   g.vignette.value = p.vignette; g.grain.value = p.grain; g.aberration.value = p.aberration; g.gradeMix.value = Math.max(0, Math.min(1, Number(p.grade)));
   if (P.rays) P.rays.intensity = p.raysIntensity;

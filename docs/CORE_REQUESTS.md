@@ -46,23 +46,3 @@ What: `src/core/App.js` sets `renderer.shadowMap.type = THREE.PCFSoftShadowMap`;
 Why: the critic requires zero warnings. The environment module currently works around it by switching the type to
 `THREE.PCFShadowMap` in its init (before the first render); a game without environment would still warn.
 Proposed change (src/core/App.js): `this.renderer.shadowMap.type = THREE.PCFShadowMap;`
-
-## [open] environment — shadow-map render policy hook (optional)
-What: environment sets `renderer.shadowMap.autoUpdate = false` while `clock.paused` and re-renders the shadow map
-only when camera/time/weather/scene-change events fire (plus every 10th frame). Modules that animate casters while the
-clock is paused should call `ctx.modules.environment.api.invalidateShadows()`.
-Why: the 4096² shadow pass dominated headless (SwiftShader) frame time during the screenshot tool's 61 settle frames.
-Proposed change: none required in core; documenting so the integrator knows. A `scene:changed` event would be cleaner.
-
-## [open] effects — screenshot tool: block Vite's HMR client during capture
-What: in `tools/screenshot.mjs` `shoot()`, before `page.goto`, serve a stub for the HMR client (an abort logs a console error): `await page.route('**/@vite/client', (r) => r.fulfill({ status: 200, contentType: 'application/javascript', body: 'export const createHotContext = () => ({ accept() {}, dispose() {}, prune() {}, on() {}, off() {}, send() {}, invalidate() {} }); export const injectQuery = (u) => u; export function updateStyle() {} export function removeStyle() {}' }));`.
-Why: with several builders saving files, Vite full-reloads every open page; captures then die with "Execution context was destroyed … navigation" / `page.screenshot` timeouts. Measured: with the client blocked a 720p effects capture completes in ~70 s; without it the same capture failed 4× in a row. Nothing in `src/` needs the HMR client.
-
-## [open] audio — expose per-module stats in Debug.stats() / screenshot JSON
-What: `Debug.stats()` (and therefore `tools/screenshot.mjs` JSON) should include `stats.custom[name] = def.api.getStats?.()` for every module that implements `api.getStats()` (wrapped in try/catch, output JSON-safe and truncated).
-Why: non-visual modules (audio) can only prove they are running through a DOM panel in the screenshot. Audio already exposes `api.getAnalysis()` (per-layer RMS/dB, event counters, context state, cpu ms); surfacing it in the JSON lets the critic assert "levels > 0 / context running" numerically instead of reading pixels.
-Proposed change (src/core/Debug.js, inside `stats()`):
-```js
-custom: Object.fromEntries(Object.entries(app.modules).flatMap(([k, v]) => { try { const s = v.api?.getStats?.(); return s ? [[k, JSON.parse(JSON.stringify(s).slice(0, 4000))]] : []; } catch { return []; } })),
-```
-(audio will alias `api.getStats = () => compact(getAnalysis())`.)

@@ -218,8 +218,8 @@ export class RoadBuilder {
       if (Math.abs(o) > laneEdge + 0.2) f *= 0.94;
       const dA = sm.s - s0, dB = s1 - sm.s;
       let dark = 0;
-      if (junA) dark = Math.max(dark, 1 - Math.min(1, dA / 18));
-      if (junB) dark = Math.max(dark, 1 - Math.min(1, dB / 18));
+      if (junA && L.crosswalk) dark = Math.max(dark, 1 - Math.min(1, dA / 18));
+      if (junB && L.crosswalk) dark = Math.max(dark, 1 - Math.min(1, dB / 18));
       f *= 1 - 0.17 * dark * dark;
       return [f, f, f * 0.985];
     };
@@ -346,8 +346,8 @@ export class RoadBuilder {
   buildNode(node, info) {
     const G = { asphalt: new GeoBuilder(), curb: new GeoBuilder(), paving: new GeoBuilder(), paint: new GeoBuilder(), grass: new GeoBuilder() };
     if (!info.polygon) return this.finish(G);
-    const junction = info.junction;
-    fillPolygon(G.asphalt, info.polygon, { uvScale: TILE.asphalt, colorFn: (x, z) => { const f = macroAt(x, z) * (junction ? 0.86 : 0.95); return [f, f, f * 0.985]; } });
+    const grime = info.junction && info.ends.some((E) => E.L.crosswalk) ? 0.87 : 0.96;
+    fillPolygon(G.asphalt, info.polygon, { uvScale: TILE.asphalt, colorFn: (x, z) => { const f = macroAt(x, z) * grime; return [f, f, f * 0.985]; } });
     for (const c of info.corners) {
       if (c.path.length < 2) continue;
       const psp = new PathSampler(c.path);

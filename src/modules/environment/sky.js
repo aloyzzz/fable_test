@@ -213,7 +213,7 @@ export class SkySystem {
       vertexShader: EQUIRECT_VERT, fragmentShader: EQUIRECT_FRAG, depthTest: false, depthWrite: false,
       uniforms: {
         uBetaM: { value: 21e-6 }, uMieG: { value: 0.76 }, uSunDir: { value: new THREE.Vector3(0, 1, 0) }, uSunE: { value: 3.5 },
-        uMoonDir: { value: new THREE.Vector3(0, -1, 0) }, uMoonE: { value: new THREE.Vector3() }, uMS: { value: 2.6 }, uAlt: { value: 40 },
+        uMoonDir: { value: new THREE.Vector3(0, -1, 0) }, uMoonE: { value: new THREE.Vector3() }, uMS: { value: 1.8 }, uMSK: { value: 1.0 }, uAlt: { value: 40 },
         uCover: { value: 0 }, uOvercast: { value: new THREE.Vector3() }, uSunT: { value: new THREE.Vector3(1, 1, 1) },
         uGround: { value: new THREE.Vector3() }, uMoonT: { value: new THREE.Vector3() },
       },

@@ -13,30 +13,30 @@ function hash2(x, y, s = 0) {
 // ---------- textures ----------
 export function makeGroundMaterial(ctx) {
   const set = ctx.tex.pbr('env-grass', 1024, 1024, (o, x, y, u, v) => {
-    const blades = fbm(u * 48, v * 48, 4, 2.1, 0.55, 48);
-    const clump = fbm(u * 9 + 3.1, v * 9 + 1.7, 4, 2, 0.5, 9);
-    const dry = fbm(u * 3.3 + 7.7, v * 3.3 + 2.2, 3, 2, 0.5, 3.3);
-    const w = worley(u * 26, v * 26, 26, 5);
-    const dirtMask = smoothstep(0.62, 0.78, fbm(u * 5 + 11, v * 5 + 4, 4, 2, 0.5, 5)) * smoothstep(0.4, 0.55, clump);
-    // grass: green with yellow dry patches and dark damp clumps
-    let r = 0.19 + 0.07 * blades + 0.10 * dry, g = 0.30 + 0.09 * blades + 0.06 * dry, b = 0.09 + 0.04 * blades + 0.02 * dry;
-    const dark = smoothstep(0.55, 0.3, clump) * 0.35;
-    r *= 1 - dark; g *= 1 - dark * 0.9; b *= 1 - dark * 0.8;
-    const dryness = smoothstep(0.55, 0.75, dry);
-    r = r * (1 - dryness) + 0.46 * dryness; g = g * (1 - dryness) + 0.41 * dryness; b = b * (1 - dryness) + 0.20 * dryness;
-    // dirt
-    const dr = 0.36 + 0.08 * w.f1, dg = 0.28 + 0.06 * w.f1, db = 0.18 + 0.04 * w.f1;
+    const blades = fbm(u * 96, v * 96, 3, 2.2, 0.5, 96);          // fine blade texture (~15 cm)
+    const tufts = fbm(u * 22 + 3.1, v * 22 + 1.7, 4, 2, 0.5, 22);  // 60 cm tufts
+    const patch = fbm(u * 2.6 + 7.7, v * 2.6 + 2.2, 4, 2, 0.55, 2.6); // ~5 m dry/damp patches
+    const w = worley(u * 30, v * 30, 30, 5);
+    const dirtMask = smoothstep(0.66, 0.80, fbm(u * 4 + 11, v * 4 + 4, 4, 2, 0.5, 4)) * smoothstep(0.35, 0.5, tufts);
+    // desaturated meadow green, dry straw patches, darker damp areas
+    const t = 0.5 + 0.5 * (blades - 0.5) * 1.6 + 0.4 * (tufts - 0.5);
+    let r = 0.25 + 0.09 * t, g = 0.31 + 0.10 * t, b = 0.13 + 0.05 * t;
+    const dryness = smoothstep(0.50, 0.72, patch) * 0.8;
+    r = r * (1 - dryness) + 0.50 * dryness; g = g * (1 - dryness) + 0.44 * dryness; b = b * (1 - dryness) + 0.24 * dryness;
+    const damp = smoothstep(0.48, 0.30, patch) * 0.3;
+    r *= 1 - damp; g *= 1 - damp * 0.85; b *= 1 - damp * 0.7;
+    const dr = 0.40 + 0.10 * w.f1, dg = 0.32 + 0.07 * w.f1, db = 0.22 + 0.05 * w.f1;
     r = r * (1 - dirtMask) + dr * dirtMask; g = g * (1 - dirtMask) + dg * dirtMask; b = b * (1 - dirtMask) + db * dirtMask;
     o.albedo[0] = r; o.albedo[1] = g; o.albedo[2] = b;
-    o.height = 0.5 + 0.35 * (blades - 0.5) * (1 - dirtMask) + 0.15 * (w.f1 - 0.5) * dirtMask + 0.1 * (clump - 0.5);
-    o.rough = 0.88 - 0.1 * dirtMask + 0.08 * (blades - 0.5);
+    o.height = 0.5 + 0.30 * (blades - 0.5) * (1 - dirtMask) + 0.12 * (tufts - 0.5) + 0.12 * (w.f1 - 0.5) * dirtMask;
+    o.rough = 0.90 - 0.12 * dirtMask + 0.06 * (blades - 0.5);
   }, { normalStrength: 2.5 });
   const macro = ctx.tex.get('env-grass-macro', () => ctx.tex.make(256, 256, (px, x, y, u, v) => {
     const n = fbm(u * 4 + 5, v * 4 + 9, 4, 2, 0.5, 4), m = fbm(u * 11 + 1, v * 11 + 3, 3, 2, 0.5, 11);
     const k = 0.72 + 0.5 * n + 0.12 * (m - 0.5);
     px[0] = 255 * clamp01(k * (1 + 0.12 * (m - 0.5))); px[1] = 255 * clamp01(k); px[2] = 255 * clamp01(k * (1 - 0.12 * (n - 0.5)));
   }, { color: false }));
-  const rep = 3000 / 14;
+  const rep = 3000 / 10;
   for (const t of [set.map, set.normalMap, set.roughnessMap]) t.repeat.set(rep, rep);
   const mat = ctx.tex.material(set, { metalness: 0, roughness: 1, normalScale: new THREE.Vector2(0.9, 0.9) });
   mat.onBeforeCompile = (shader) => {

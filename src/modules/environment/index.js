@@ -25,7 +25,7 @@ const S = {
   sun: null, sunTarget: null, hemi: null, fog: null, noiseTex: null, show: null,
   // weather (current, animated) and target
   cur: { ...WEATHER.clear, wind: [1.5, 0.4] }, target: { ...WEATHER.clear }, kind: 'clear',
-  animTime: 0, shadowDirty: true, lastCamKey: '',
+  animTime: 0,
   lastSkyHour: -99, lastPmremHour: -99, skyFrame: -999, pmremFrame: -999, frame: 0, lastSkyCover: -1, lastSkyTurb: -1, lastPmremCover: -1,
   // lighting state (public through api)
   state: {
@@ -33,7 +33,7 @@ const S = {
     sunIntensity: 0, sunColor: new THREE.Color(), moonIntensity: 0, daylight: 1, night: 0, exposure: 0.8,
     zenith: [0, 0, 0], horizon: [0, 0, 0], ground: [0, 0, 0], skyLum: 0,
   },
-  P: { betaM: MIE_BASE, g: 0.76, sunDir: [0, 1, 0], sunE: SUN_E, moonDir: [0, -1, 0], moonE: [0, 0, 0], ms: 2.6, alt: 40 },
+  P: { betaM: MIE_BASE, g: 0.76, sunDir: [0, 1, 0], sunE: SUN_E, moonDir: [0, -1, 0], moonE: [0, 0, 0], ms: 1.8, msk: 1.0, alt: 40 },
 };
 
 // ---------- astronomy ----------
@@ -155,7 +155,7 @@ function applyLighting(ctx) {
 function setEquirectUniforms() {
   const st = S.state, P = S.P, u = S.sky.equirectMat.uniforms;
   u.uBetaM.value = P.betaM; u.uMieG.value = P.g; u.uSunDir.value.copy(st.sunDir); u.uSunE.value = SUN_E;
-  u.uMoonDir.value.copy(st.moonDir); u.uMoonE.value.set(P.moonE[0], P.moonE[1], P.moonE[2]); u.uMS.value = P.ms; u.uAlt.value = P.alt;
+  u.uMoonDir.value.copy(st.moonDir); u.uMoonE.value.set(P.moonE[0], P.moonE[1], P.moonE[2]); u.uMS.value = P.ms; u.uMSK.value = P.msk; u.uAlt.value = P.alt;
   u.uCover.value = S.cur.cloudCover;
   const ov = S.cur.cloudCover * S.cur.cloudCover;
   // uOvercast: the overcast dome radiance ~ zenith after blending (zenith already blended in computeLighting)
@@ -262,8 +262,6 @@ const api = {
   getState: () => S.state,
   setupMaterial: (mat) => mat,   // no CSM: plain shadow maps work on every material
   getEnvironmentMap: () => S.pmremRT?.texture ?? null,
-  /** Call after moving/adding shadow casters while the clock is paused (shadows are cached while paused). */
-  invalidateShadows: () => { S.shadowDirty = true; },
 };
 
 export default {
@@ -311,8 +309,6 @@ export default {
     S.kind = WEATHER[kind] ? kind : 'clear';
     S.target = { ...WEATHER[S.kind] }; snapWeather(); ctx.world.weather.kind = S.kind; writeWorldWeather();
 
-    const dirty = () => { S.shadowDirty = true; };
-    for (const ev of ['camera:changed', 'time:changed', 'weather:changed', 'terrain:changed', 'roads:changed', 'lots:changed', 'buildings:changed', 'module:status', 'resize']) S.unsub.push(ctx.events.on(ev, dirty));
     computeLighting(ctx);
     applyLighting(ctx);
     fitShadow(ctx);
@@ -327,15 +323,6 @@ export default {
     computeLighting(ctx);
     applyLighting(ctx);
     fitShadow(ctx);
-    // Shadow pass policy: every frame while time runs; while paused (editor idle / screenshot settle) only when
-    // something changed, plus a periodic refresh so animated casters from other modules never go stale for long.
-    const sm = ctx.renderer.shadowMap;
-    const camKey = ctx.camera.position.x.toFixed(2) + ',' + ctx.camera.position.y.toFixed(2) + ',' + ctx.camera.position.z.toFixed(2) + '|' + ctx.rig.target.x.toFixed(2) + ',' + ctx.rig.target.z.toFixed(2);
-    if (camKey !== S.lastCamKey) { S.lastCamKey = camKey; S.shadowDirty = true; }
-    if (ctx.clock.paused && S.frame > 3) {
-      sm.autoUpdate = false;
-      if (S.shadowDirty || S.frame % 10 === 0) { sm.needsUpdate = true; S.shadowDirty = false; }
-    } else { sm.autoUpdate = true; S.shadowDirty = false; }
     S.sky.dome.position.copy(ctx.camera.position);
     refreshSky(ctx, false);
     if (S.rain) {
@@ -357,7 +344,6 @@ export default {
 
   dispose(ctx) {
     for (const u of S.unsub) u(); S.unsub.length = 0;
-    ctx.renderer.shadowMap.autoUpdate = true;
     S.show?.dispose(); S.show = null;
     S.rain?.dispose(); S.sky?.dispose();
     for (const o of [S.sun, S.sunTarget, S.hemi]) o?.parent?.remove(o);

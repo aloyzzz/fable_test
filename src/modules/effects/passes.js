@@ -33,7 +33,7 @@ const MASK_FS = /* glsl */`
     float r = length(dv);
     float fall = 1.0 - smoothstep(0.0, falloff, r);
     fall *= fall;
-    gl_FragColor = vec4(vec3(sky * fall), 1.0);
+    gl_FragColor = vec4(sky * fall, sky, 0.0, 1.0);
   }`;
 
 const RADIAL_FS = /* glsl */`
@@ -51,11 +51,15 @@ const RADIAL_FS = /* glsl */`
   }`;
 
 const COMP_FS = /* glsl */`
-  uniform sampler2D tRays;
+  uniform sampler2D tRays, tMask;
   uniform vec3 color;
-  uniform float strength;
+  uniform float strength, skyDamp;
   varying vec2 vUv;
-  void main() { float r = texture2D(tRays, vUv).r; gl_FragColor = vec4(color * r * strength, 1.0); }`;
+  void main() {
+    float r = texture2D(tRays, vUv).r;
+    float sky = texture2D(tMask, vUv).g;          // open sky already carries the environment's own glare → damp there
+    gl_FragColor = vec4(color * r * strength * mix(1.0, skyDamp, sky), 1.0);
+  }`;
 
 /**
  * Cheap screen-space sun shafts: sky mask (from the scene depth) × radial falloff around the sun, two radial blurs
@@ -76,20 +80,21 @@ export class RaysPass extends Pass {
     const opts = { type: THREE.HalfFloatType, depthBuffer: false, minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter };
     this.rtA = new THREE.WebGLRenderTarget(4, 4, opts); this.rtA.texture.name = 'Rays.a';
     this.rtB = new THREE.WebGLRenderTarget(4, 4, opts); this.rtB.texture.name = 'Rays.b';
+    this.rtC = new THREE.WebGLRenderTarget(4, 4, opts); this.rtC.texture.name = 'Rays.c';
     const mk = (fs, uniforms, extra = {}) => new THREE.ShaderMaterial({ uniforms, vertexShader: QUAD_VS, fragmentShader: fs, depthTest: false, depthWrite: false, ...extra });
-    this.maskMat = mk(MASK_FS, { tDepth: { value: null }, sunUv: { value: new THREE.Vector2() }, cameraNear: { value: 1 }, cameraFar: { value: 1000 }, aspect: { value: 1 }, falloff: { value: 1.25 } });
+    this.maskMat = mk(MASK_FS, { tDepth: { value: null }, sunUv: { value: new THREE.Vector2() }, cameraNear: { value: 1 }, cameraFar: { value: 1000 }, aspect: { value: 1 }, falloff: { value: 1.0 } });
     this.blurMat = mk(RADIAL_FS, { tDiffuse: { value: null }, sunUv: { value: new THREE.Vector2() }, density: { value: 0.5 }, decay: { value: 0.96 }, weight: { value: 1 / 16 } });
-    this.compMat = mk(COMP_FS, { tRays: { value: null }, color: { value: new THREE.Color() }, strength: { value: 0 } }, { blending: THREE.AdditiveBlending, transparent: true });
+    this.compMat = mk(COMP_FS, { tRays: { value: null }, tMask: { value: null }, color: { value: new THREE.Color() }, strength: { value: 0 }, skyDamp: { value: 0.35 } }, { blending: THREE.AdditiveBlending, transparent: true });
     this._quad = new FullScreenQuad(null);
     this._v = new THREE.Vector3(); this._fwd = new THREE.Vector3(); this._clear = new THREE.Color();
     this.setSize(width, height);
   }
   setSize(w, h) {
     const sw = Math.max(2, Math.round(w * this.scale)), sh = Math.max(2, Math.round(h * this.scale));
-    this.rtA.setSize(sw, sh); this.rtB.setSize(sw, sh);
+    this.rtA.setSize(sw, sh); this.rtB.setSize(sw, sh); this.rtC.setSize(sw, sh);
     this.maskMat.uniforms.aspect.value = w / h;
   }
-  dispose() { this.rtA.dispose(); this.rtB.dispose(); this.maskMat.dispose(); this.blurMat.dispose(); this.compMat.dispose(); this._quad.dispose(); }
+  dispose() { this.rtA.dispose(); this.rtB.dispose(); this.rtC.dispose(); this.maskMat.dispose(); this.blurMat.dispose(); this.compMat.dispose(); this._quad.dispose(); }
   /** Computes this frame's shaft strength (0 → the pass draws nothing). */
   _computeStrength() {
     const cam = this.camera;
@@ -115,13 +120,13 @@ export class RaysPass extends Pass {
     const mu = this.maskMat.uniforms;
     mu.tDepth.value = depthTex; mu.sunUv.value.copy(this.sunScreen); mu.cameraNear.value = cam.near; mu.cameraFar.value = cam.far;
     this._quad.material = this.maskMat; renderer.setRenderTarget(this.rtA); this._quad.render(renderer);
-    // 2) two radial blurs (A→B, B→A)
+    // 2) two radial blurs (A→B, B→C); A keeps the unblurred mask
     const bu = this.blurMat.uniforms; bu.sunUv.value.copy(this.sunScreen);
     this._quad.material = this.blurMat;
     bu.tDiffuse.value = this.rtA.texture; bu.density.value = 0.35; bu.decay.value = 0.97; renderer.setRenderTarget(this.rtB); this._quad.render(renderer);
-    bu.tDiffuse.value = this.rtB.texture; bu.density.value = 0.85; bu.decay.value = 0.95; renderer.setRenderTarget(this.rtA); this._quad.render(renderer);
+    bu.tDiffuse.value = this.rtB.texture; bu.density.value = 0.85; bu.decay.value = 0.95; renderer.setRenderTarget(this.rtC); this._quad.render(renderer);
     // 3) additive composite into the current HDR buffer
-    const cu = this.compMat.uniforms; cu.tRays.value = this.rtA.texture; cu.color.value.copy(this.color); cu.strength.value = this.strength;
+    const cu = this.compMat.uniforms; cu.tRays.value = this.rtC.texture; cu.tMask.value = this.rtA.texture; cu.color.value.copy(this.color); cu.strength.value = this.strength;
     this._quad.material = this.compMat; renderer.setRenderTarget(this.renderToScreen ? null : readBuffer); this._quad.render(renderer);
     renderer.autoClear = oldAuto; renderer.setClearColor(this._clear, oldAlpha);
   }
