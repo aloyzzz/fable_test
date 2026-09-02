@@ -1,6 +1,7 @@
 // buildings module — STUB. Owned by the buildings builder. See ARCHITECTURE.md §4 for the contract.
 export default {
   name: 'buildings',
+  stub: true,
   wave: 2,
   deps: [],
   showcaseDeps: ['environment'],

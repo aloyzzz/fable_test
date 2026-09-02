@@ -1,6 +1,7 @@
 // audio module — STUB. Owned by the audio builder. See ARCHITECTURE.md §4 for the contract.
 export default {
   name: 'audio',
+  stub: true,
   wave: 1,
   deps: [],
   showcaseDeps: ['environment'],

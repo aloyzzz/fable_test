@@ -1,6 +1,7 @@
 // props module — STUB. Owned by the props builder. See ARCHITECTURE.md §4 for the contract.
 export default {
   name: 'props',
+  stub: true,
   wave: 2,
   deps: [],
   showcaseDeps: ['environment'],

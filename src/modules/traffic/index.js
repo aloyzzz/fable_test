@@ -1,6 +1,7 @@
 // traffic module — STUB. Owned by the traffic builder. See ARCHITECTURE.md §4 for the contract.
 export default {
   name: 'traffic',
+  stub: true,
   wave: 2,
   deps: [],
   showcaseDeps: ['environment'],

@@ -1,6 +1,7 @@
 // tools module — STUB. Owned by the tools builder. See ARCHITECTURE.md §4 for the contract.
 export default {
   name: 'tools',
+  stub: true,
   wave: 2,
   deps: [],
   showcaseDeps: ['environment'],

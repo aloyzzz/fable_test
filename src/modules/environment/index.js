@@ -1,6 +1,7 @@
 // environment module — STUB. Owned by the environment builder. See ARCHITECTURE.md §4 for the contract.
 export default {
   name: 'environment',
+  stub: true,
   wave: 1,
   deps: [],
   showcaseDeps: [],

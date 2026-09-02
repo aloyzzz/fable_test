@@ -1,6 +1,7 @@
 // terrain module — STUB. Owned by the terrain builder. See ARCHITECTURE.md §4 for the contract.
 export default {
   name: 'terrain',
+  stub: true,
   wave: 1,
   deps: [],
   showcaseDeps: ['environment'],

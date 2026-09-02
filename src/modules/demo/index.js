@@ -1,6 +1,7 @@
 // demo module — STUB. Owned by the demo builder. See ARCHITECTURE.md §4 for the contract.
 export default {
   name: 'demo',
+  stub: true,
   wave: 3,
   deps: [],
   showcaseDeps: ['environment'],

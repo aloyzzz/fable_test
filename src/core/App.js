@@ -121,8 +121,9 @@ export class App {
     for (const name of names) await initOne(name);
 
     if (showcase && this.modules[showcase]?.status === 'ok') {
-      if (!this.modules.environment || this.modules.environment.status !== 'ok') { this.stage.light(); }
-      if (!names.includes('terrain') || this.modules.terrain?.status !== 'ok') { this.stage.ground(); }
+      const live = (n) => this.modules[n] && this.modules[n].status === 'ok' && !this.modules[n].def.stub;
+      if (!live('environment')) { this.stage.light(); }
+      if (!live('terrain')) { this.stage.ground(); }
       this.rig.setPreset('showcase');
       try { await this.modules[showcase].def.showcase?.(this.ctx); } catch (e) { this.modules[showcase].status = 'failed'; this.modules[showcase].error = e; console.error(`[core] showcase '${showcase}' failed:`, e); }
     }
