@@ -10,7 +10,7 @@ const args = Object.fromEntries(process.argv.slice(2).map((a) => { const m = a.m
 const URL_BASE = args.url || 'http://localhost:5173';
 const W = Number(args.w || 1920), H = Number(args.h || 1080);
 const FRAMES = Number(args.frames || 90);
-const TIMEOUT = Number(args.timeout || 120000);
+const TIMEOUT = Number(args.timeout || 180000);
 const MODULES = ['terrain', 'environment', 'roads', 'zoning', 'buildings', 'props', 'traffic', 'effects', 'simulation', 'tools', 'ui', 'audio', 'demo'];
 const TIMES = [9, 14, 19.5, 23];
 
@@ -23,6 +23,7 @@ function buildUrl(o) {
   if (o.weather) p.set('weather', o.weather);
   if (o.quality) p.set('quality', o.quality);
   if (o.only) p.set('only', o.only);
+  if (o.extra) for (const kv of String(o.extra).split('&')) { const [k, v] = kv.split('='); if (k) p.set(k, v ?? ''); }
   p.set('paused', '1');
   return `${URL_BASE}/?${p.toString()}`;
 }
@@ -41,6 +42,8 @@ async function shoot(browser, o) {
     await page.goto(url, { waitUntil: 'load', timeout: TIMEOUT });
     await page.waitForFunction(() => window.__city && window.__city.ready === true, null, { timeout: TIMEOUT, polling: 200 });
     const readyMs = Date.now() - t0;
+    // stop the free-running rAF loop: frames are driven synchronously via step() from here on (keeps CPU load sane when many tools run)
+    await page.evaluate(() => { window.__city.setLoop(false); window.__city.pause(true); });
     if (o.cam) await page.evaluate((c) => { if (!window.__city.setCamera(c)) { const m = c.match(/^([-\d.]+),([-\d.]+),([-\d.]+):([-\d.]+),([-\d.]+),([-\d.]+)$/); if (m) window.__city.setCamera({ position: [+m[1], +m[2], +m[3]], target: [+m[4], +m[5], +m[6]] }); } }, o.cam);
     if (o.time != null) await page.evaluate((t) => window.__city.setTime(t), o.time);
     if (o.weather) await page.evaluate((w) => window.__city.setWeather(w), o.weather);
@@ -56,7 +59,7 @@ async function shoot(browser, o) {
       await new Promise((r) => requestAnimationFrame(r));
       return { ...c.stats(), frameMs: ms, fps: 1000 / ms };
     }, FRAMES);
-    await page.screenshot({ path: out + '.png', type: 'png' });
+    await page.screenshot({ path: out + '.png', type: 'png', timeout: 180000 });
     const failedModules = Object.entries(perf.modules).filter(([, v]) => v.status === 'failed' || v.status === 'missing').map(([k, v]) => `${k}:${v.status}`);
     result = {
       ok: pageErrors.length === 0 && perf.errors.length === 0 && consoleErrors.length === 0 && failedModules.length === 0,
@@ -90,7 +93,7 @@ async function main() {
   const jobs = [];
   if (args.all) jobs.push(...standardSet());
   else if (args.showcases) for (const m of String(args.showcases).split(',')) for (const t of (args.times ? String(args.times).split(',').map(Number) : TIMES)) jobs.push({ showcase: m, time: t, cam: args.cam, out: `shots/${m}-${t}` });
-  else jobs.push({ showcase: args.showcase, time: args.time != null ? Number(args.time) : undefined, cam: args.cam, seed: args.seed, weather: args.weather, quality: args.quality, only: args.only, out: args.out });
+  else jobs.push({ showcase: args.showcase, time: args.time != null ? Number(args.time) : undefined, cam: args.cam, seed: args.seed, weather: args.weather, quality: args.quality, only: args.only, extra: args.extra, out: args.out });
   let bad = 0;
   for (const j of jobs) {
     const r = await shoot(browser, j);

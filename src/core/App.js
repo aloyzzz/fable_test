@@ -37,6 +37,7 @@ export class App {
     this._fpsAcc = 0; this._fpsN = 0; this._lastT = performance.now();
     this.modules = {};
     this._renderFn = null; this._renderFails = 0;
+    this.loopEnabled = true;   // screenshot tool sets false and drives frames via step()
 
     const seed = Number(this.params.get('seed') || 1337) | 0;
     this.quality = this.params.get('quality') === 'low' ? 'low' : 'high';
@@ -158,6 +159,7 @@ export class App {
 
   _loop(now) {
     requestAnimationFrame(this._loop);
+    if (!this.loopEnabled) { this._lastT = now; return; }
     let dt = (now - this._lastT) / 1000; this._lastT = now;
     if (dt > 0.1) dt = 0.1;
     this.frame(dt, false);

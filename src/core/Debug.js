@@ -19,6 +19,7 @@ export function installDebug(app) {
     setWeather(k) { app.modules.environment?.api?.setWeather?.(k); },
     setSpeed(s) { app.clock.setSpeed(Number(s)); },
     pause(v = true) { app.clock.paused = v; },
+    setLoop(v) { app.loopEnabled = !!v; },
     step(n = 1) { for (let i = 0; i < n; i++) app.frame(1 / 60, true); },
     stats() {
       const info = app.renderer.info;
