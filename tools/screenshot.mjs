@@ -14,6 +14,29 @@ const TIMEOUT = Number(args.timeout || 180000);
 const MODULES = ['terrain', 'environment', 'roads', 'zoning', 'buildings', 'props', 'traffic', 'effects', 'simulation', 'tools', 'ui', 'audio', 'demo'];
 const TIMES = [9, 14, 19.5, 23];
 
+
+// ---- concurrency semaphore: at most MAX_PARALLEL screenshot tools render at once (software GL on 4 cores) ----
+const MAX_PARALLEL = Number(process.env.SHOT_PARALLEL || 2);
+const LOCK_DIR = path.join(process.cwd(), 'shots', '.locks');
+function pidAlive(pid) { try { process.kill(pid, 0); return true; } catch { return false; } }
+async function acquireSlot() {
+  fs.mkdirSync(LOCK_DIR, { recursive: true });
+  const start = Date.now();
+  for (;;) {
+    for (let i = 0; i < MAX_PARALLEL; i++) {
+      const f = path.join(LOCK_DIR, `slot${i}`);
+      try {
+        const owner = Number(fs.readFileSync(f, 'utf8'));
+        if (!pidAlive(owner) || Date.now() - fs.statSync(f).mtimeMs > 15 * 60 * 1000) fs.unlinkSync(f);
+        else continue;
+      } catch {}
+      try { fs.writeFileSync(f, String(process.pid), { flag: 'wx' }); return () => { try { fs.unlinkSync(f); } catch {} }; } catch {}
+    }
+    if (Date.now() - start > 30 * 60 * 1000) throw new Error('screenshot slot wait timed out');
+    await new Promise((r) => setTimeout(r, 1500 + Math.floor(Math.random() * 1000)));
+  }
+}
+
 function buildUrl(o) {
   const p = new URLSearchParams();
   if (o.showcase) p.set('showcase', o.showcase);
@@ -89,6 +112,8 @@ function standardSet() {
 
 async function main() {
   if (args.list) { console.log(standardSet().map(buildUrl).join('\n')); return; }
+  const release = await acquireSlot();
+  process.on('exit', release);
   const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium', args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--enable-webgl', '--no-sandbox', '--disable-dev-shm-usage', '--autoplay-policy=no-user-gesture-required'] });
   const jobs = [];
   if (args.all) jobs.push(...standardSet());
@@ -103,6 +128,7 @@ async function main() {
     if (!r.ok && r.errors?.length) for (const e of r.errors.slice(0, 5)) console.log('     ! ' + e.split('\n')[0]);
   }
   await browser.close();
+  release();
   process.exit(bad ? 1 : 0);
 }
 main().catch((e) => { console.error(e); process.exit(2); });
