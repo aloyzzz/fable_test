@@ -1,0 +1,35 @@
+{
+  "name": "skylines-3",
+  "version": "0.1.0",
+  "description": "Cities: Skylines II-class city builder in Three.js",
+  "main": "index.js",
+  "scripts": {
+    "dev": "vite --port 5173 --host",
+    "build": "vite build",
+    "preview": "vite preview --port 5173",
+    "shot": "node tools/screenshot.mjs",
+    "shot:all": "node tools/screenshot.mjs --all",
+    "check:rng": "node tools/check-rng.mjs",
+    "critic": "node tools/screenshot.mjs --critic"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aloyzzz/fable_test.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/aloyzzz/fable_test/issues"
+  },
+  "homepage": "https://github.com/aloyzzz/fable_test#readme",
+  "dependencies": {
+    "three": "^0.185.1",
+    "vite": "^8.2.2"
+  },
+  "devDependencies": {
+    "playwright-core": "^1.62.1"
+  },
+  "private": true,
+  "type": "module"
+}

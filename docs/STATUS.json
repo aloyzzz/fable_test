@@ -1,0 +1,22 @@
+{
+  "updated": "2026-09-02T00:00:00Z",
+  "wave": 0,
+  "modules": {
+    "terrain":     { "wave": 1, "round": 0, "score": null, "pass": false, "issues": [] },
+    "environment": { "wave": 1, "round": 0, "score": null, "pass": false, "issues": [] },
+    "roads":       { "wave": 1, "round": 0, "score": null, "pass": false, "issues": [] },
+    "simulation":  { "wave": 1, "round": 0, "score": null, "pass": false, "issues": [] },
+    "ui":          { "wave": 1, "round": 0, "score": null, "pass": false, "issues": [] },
+    "audio":       { "wave": 1, "round": 0, "score": null, "pass": false, "issues": [] },
+    "effects":     { "wave": 1, "round": 0, "score": null, "pass": false, "issues": [] },
+    "zoning":      { "wave": 2, "round": 0, "score": null, "pass": false, "issues": [] },
+    "buildings":   { "wave": 2, "round": 0, "score": null, "pass": false, "issues": [] },
+    "props":       { "wave": 2, "round": 0, "score": null, "pass": false, "issues": [] },
+    "traffic":     { "wave": 2, "round": 0, "score": null, "pass": false, "issues": [] },
+    "tools":       { "wave": 2, "round": 0, "score": null, "pass": false, "issues": [] },
+    "demo":        { "wave": 3, "round": 0, "score": null, "pass": false, "issues": [] }
+  },
+  "game": { "round": 0, "score": null, "pass": false, "issues": [] },
+  "blindJudges": null,
+  "history": []
+}

@@ -1,0 +1,7 @@
+node_modules/
+dist/
+shots/*
+!shots/keep/
+!shots/.gitkeep
+.vite/
+*.log
