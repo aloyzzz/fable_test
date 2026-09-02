@@ -287,6 +287,8 @@ export default {
     S.pmrem = new THREE.PMREMGenerator(ctx.renderer);
     S.pmrem.compileEquirectangularShader();
 
+    // r185 deprecates PCFSoftShadowMap (the core's default) and warns at render time; switch before the first render.
+    if (ctx.renderer.shadowMap.type === THREE.PCFSoftShadowMap) ctx.renderer.shadowMap.type = THREE.PCFShadowMap;
     S.sun = new THREE.DirectionalLight(0xffffff, 3);
     S.sun.name = 'env-sun';
     S.sun.castShadow = true;

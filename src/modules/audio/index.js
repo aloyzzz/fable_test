@@ -68,9 +68,9 @@ function buildGraph(s) {
   s.spectrum = s.nodes.specBuf;
 
   for (const def of LAYER_DEFS) {
-    const inNode = gain(0), userNode = gain(1), an = ac.createAnalyser(); an.fftSize = 2048; an.smoothingTimeConstant = 0;
+    const inNode = gain(0), userNode = gain(1), an = ac.createAnalyser(); an.fftSize = 1024; an.smoothingTimeConstant = 0;
     inNode.connect(userNode); userNode.connect(an); an.connect(def.name === 'ui' ? uiBus : ambBus);
-    const L = { ...def, inNode, userNode, an, buf: new Float32Array(2048), rms: 0, meter: 0, peakHold: 0, peakT: 0, auto: 0, applied: -1, user: 1, note: '', events: 0 };
+    const L = { ...def, inNode, userNode, an, buf: new Float32Array(1024), rms: 0, meter: 0, peakHold: 0, peakT: 0, auto: 0, applied: -1, user: 1, note: '', events: 0 };
     s.layers.set(def.name, L); s.layerList.push(L);
   }
   const rng = s.rngs.noise;
@@ -358,7 +358,7 @@ export default {
     if (s.ac) {
       const now = ctx.clock.elapsed;
       if (now - s.lastMixT >= 0.1 || s.lastMixT < 0) { s.lastMixT = now; computeMix(s); applyMix(s); }
-      if (s.running) { runTasks(s); analyse(s); }
+      if (s.running) { runTasks(s); if ((s.frame = (s.frame | 0) + 1) & 1) analyse(s); }
       else if (s.demo && s.demo.retry !== undefined) { s.demo.retry -= dt; if (s.demo.retry <= 0) { s.demo.retry = 1.5; start(); } }
     } else if (s.demo && !s.unsupported && !s.startedOnce) start();
     const t1 = performance.now();

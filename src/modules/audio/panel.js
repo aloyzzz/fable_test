@@ -1,42 +1,42 @@
 // Showcase / debug panel: dark-glass DOM overlay with a master spectrum, per-layer level meters and the mapped
 // mix parameters. Pure DOM (0 WebGL draw calls). Only created in showcase mode or via api.showPanel(true).
 const CSS = `
-.au-panel{position:absolute;top:22px;right:22px;width:372px;box-sizing:border-box;padding:16px 18px 14px;border-radius:16px;
+.au-panel{position:absolute;top:22px;right:22px;width:372px;box-sizing:border-box;padding:13px 16px 11px;border-radius:16px;max-height:calc(100vh - 44px);overflow:hidden;
  background:linear-gradient(160deg,rgba(20,26,44,.9),rgba(8,11,20,.94)); border:1px solid rgba(255,255,255,.12);box-shadow:0 18px 50px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.08);color:#e9edf5;
  font:12px/1.35 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;letter-spacing:.01em;user-select:none}
-.au-h{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.au-h{display:flex;align-items:center;gap:10px;margin-bottom:8px}
 .au-dot{width:9px;height:9px;border-radius:50%;background:#ff5d73;box-shadow:0 0 0 3px rgba(255,93,115,.18)}
 .au-dot.on{background:#3fd3a4;box-shadow:0 0 0 3px rgba(63,211,164,.18),0 0 12px rgba(63,211,164,.6)}
 .au-title{font-weight:650;font-size:13.5px;letter-spacing:.06em;text-transform:uppercase}
 .au-sub{margin-left:auto;font-size:10.5px;color:#9aa6bd;text-align:right}
 .au-pill{font-size:10px;font-weight:700;letter-spacing:.08em;padding:2px 7px;border-radius:20px;background:rgba(255,93,115,.18);color:#ff8a9a}
 .au-pill.on{background:rgba(63,211,164,.16);color:#6fe8c2}
-.au-spec{display:block;width:100%;height:58px;border-radius:8px;background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.06);margin:2px 0 10px}
-.au-row{display:grid;grid-template-columns:96px 1fr 52px;align-items:center;gap:8px;padding:3.5px 0}
+.au-spec{display:block;width:100%;height:46px;border-radius:8px;background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.06);margin:0 0 6px}
+.au-row{display:grid;grid-template-columns:96px 1fr 52px;align-items:center;gap:8px;padding:1.5px 0}
 .au-row.off{opacity:.42}
-.au-name{font-weight:600;font-size:12px;white-space:nowrap}
-.au-desc{font-size:9.5px;color:#8d99b1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:400;margin-top:1px}
-.au-track{position:relative;height:9px;border-radius:5px;background:rgba(255,255,255,.07);overflow:hidden}
+.au-name{font-weight:600;font-size:11.5px;white-space:nowrap;line-height:1.2}
+.au-desc{font-size:9px;line-height:1.2;color:#8d99b1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:400;margin-top:1px}
+.au-track{position:relative;height:8px;border-radius:5px;background:rgba(255,255,255,.07);overflow:hidden}
 .au-fill{position:absolute;inset:0;border-radius:5px;background:linear-gradient(90deg,#2fb8a0 0%,#54d99a 45%,#ffd166 78%,#ff6b6b 100%);clip-path:inset(0 100% 0 0);will-change:clip-path}
 .au-peak{position:absolute;top:0;bottom:0;width:2px;background:#fff;opacity:.85;left:0;will-change:left}
 .au-db{font-variant-numeric:tabular-nums;text-align:right;color:#c9d2e3;font-size:11px}
 .au-g{font-size:9.5px;color:#7f8ba3;display:flex;justify-content:space-between}.au-g i{font-style:normal;color:#9fb0cc}
-.au-params{display:grid;grid-template-columns:1fr 1fr;gap:3px 14px;margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.08)}
+.au-params{display:grid;grid-template-columns:1fr 1fr;gap:2px 14px;margin-top:7px;padding-top:7px;border-top:1px solid rgba(255,255,255,.08)}
 .au-p{display:flex;justify-content:space-between;font-size:11px}
 .au-p b{color:#8d99b1;font-weight:500}.au-p span{font-variant-numeric:tabular-nums;color:#e9edf5}
-.au-foot{display:flex;align-items:center;gap:10px;margin-top:10px;padding-top:9px;border-top:1px solid rgba(255,255,255,.08);font-size:11px;color:#9aa6bd}
+.au-foot{display:flex;align-items:center;gap:10px;margin-top:7px;padding-top:7px;border-top:1px solid rgba(255,255,255,.08);font-size:11px;color:#9aa6bd}
 .au-foot input[type=range]{flex:1;accent-color:#54d99a;height:14px}
 .au-btn{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);color:#e9edf5;border-radius:8px;padding:3px 9px;font:inherit;font-size:11px;cursor:pointer}
 .au-btn:hover{background:rgba(255,255,255,.15)}
-.au-hint{margin-top:10px;padding:9px 10px;border-radius:10px;background:rgba(255,209,102,.12);border:1px solid rgba(255,209,102,.3);color:#ffd98a;font-size:12px;text-align:center}
+.au-hint{margin-top:7px;padding:7px 10px;border-radius:10px;background:rgba(255,209,102,.12);border:1px solid rgba(255,209,102,.3);color:#ffd98a;font-size:12px;text-align:center}
 `;
 
 export function createPanel(root, api) {
   const el = document.createElement('div'); el.className = 'au-panel';
   const style = document.createElement('style'); style.textContent = CSS; el.appendChild(style);
   el.innerHTML += `
-    <div class="au-h"><div class="au-dot"></div><div class="au-title">Ambience Engine</div><div class="au-sub">procedural WebAudio<br>0 draw calls · CC0 by construction</div></div>
-    <canvas class="au-spec" width="336" height="58"></canvas>
+    <div class="au-h"><div class="au-dot"></div><div class="au-title">Ambience Engine</div><div class="au-sub">procedural WebAudio<br>0 draw calls · CC0 synthesis</div></div>
+    <canvas class="au-spec" width="340" height="46"></canvas>
     <div class="au-layers"></div>
     <div class="au-params"></div>
     <div class="au-foot"><span class="au-pill">SUSPENDED</span><input type="range" min="0" max="100" value="70"><span class="au-vol">70%</span><button class="au-btn au-mute">Mute</button></div>

@@ -97,10 +97,9 @@ export function extrude(gb, samples, profile, { uScale = 4, colorFn = null, side
   for (const sm of samples) {
     const row = [];
     for (const seg of profile) {
-      const dO = (seg.o1 - seg.o0) * sideSign, dY = seg.y1 - seg.y0;
-      let nx = -dY * sideSign, ny = dO * sideSign; // perpendicular in (o,y) profile space; keep the "up-ish/outward" orientation
-      // choose orientation: normal should point away from the road centre / upwards
-      if (ny < 0 || (Math.abs(ny) < 1e-6 && nx * sideSign < 0)) { nx = -nx; ny = -ny; }
+      // profile is traversed left→right (increasing o): perpendicular (-dy, do) faces up/outward; mirror with sideSign
+      const dO = seg.o1 - seg.o0, dY = seg.y1 - seg.y0;
+      let nx = -dY * sideSign, ny = dO;
       const ln = Math.hypot(nx, ny) || 1; nx /= ln; ny /= ln;
       const wnx = sm.nx * nx, wnz = sm.nz * nx;
       const nl = Math.hypot(wnx, ny, wnz) || 1;
@@ -151,4 +150,5 @@ export function localPolygon(gb, ox, oy, oz, dx, dz, nx, nz, shape, color, uvSca
 
 // Marking shapes in lane-local (along, across) metres; "along" points toward the intersection.
 export const ARROW_STRAIGHT = [[0, -0.18], [2.6, -0.18], [2.6, -0.65], [4.0, 0], [2.6, 0.65], [2.6, 0.18], [0, 0.18]];
-export const ARROW_LEFT = [[0, -0.18], [2.2, -0.18], [2.2, 0.35], [2.7, 0.35], [2.7, -0.55], [3.5, 0.3], [2.7, 1.15], [2.7, 0.7], [1.85, 0.7], [1.85, 0.18], [0, 0.18]];
+// left turn: shaft, then a bar to the left (negative across) ending in a head pointing left
+export const ARROW_LEFT = [[0, -0.18], [2.2, -0.18], [2.2, -0.7], [1.85, -0.7], [2.45, -1.45], [3.05, -0.7], [2.7, -0.7], [2.7, 0.18], [0, 0.18]];

@@ -162,7 +162,7 @@ export class CityModel {
     const events = [];
     this._acc += clamp(fin(hours), 0, 24 * 7);
     let n = 0;
-    while (this._acc >= 1 && n < maxTicks) {
+    while (this._acc >= 1 - 1e-9 && n < maxTicks) {
       this._acc -= 1; n++;
       const r = this.tickHour(world);
       for (const g of r.grow) events.push({ type: 'sim:grow', payload: g });
