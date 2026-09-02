@@ -77,7 +77,7 @@ export class RaysPass extends Pass {
     this.rtA = new THREE.WebGLRenderTarget(4, 4, opts); this.rtA.texture.name = 'Rays.a';
     this.rtB = new THREE.WebGLRenderTarget(4, 4, opts); this.rtB.texture.name = 'Rays.b';
     const mk = (fs, uniforms, extra = {}) => new THREE.ShaderMaterial({ uniforms, vertexShader: QUAD_VS, fragmentShader: fs, depthTest: false, depthWrite: false, ...extra });
-    this.maskMat = mk(MASK_FS, { tDepth: { value: null }, sunUv: { value: new THREE.Vector2() }, cameraNear: { value: 1 }, cameraFar: { value: 1000 }, aspect: { value: 1 }, falloff: { value: 0.95 } });
+    this.maskMat = mk(MASK_FS, { tDepth: { value: null }, sunUv: { value: new THREE.Vector2() }, cameraNear: { value: 1 }, cameraFar: { value: 1000 }, aspect: { value: 1 }, falloff: { value: 1.25 } });
     this.blurMat = mk(RADIAL_FS, { tDiffuse: { value: null }, sunUv: { value: new THREE.Vector2() }, density: { value: 0.5 }, decay: { value: 0.96 }, weight: { value: 1 / 16 } });
     this.compMat = mk(COMP_FS, { tRays: { value: null }, color: { value: new THREE.Color() }, strength: { value: 0 } }, { blending: THREE.AdditiveBlending, transparent: true });
     this._quad = new FullScreenQuad(null);
@@ -100,7 +100,7 @@ export class RaysPass extends Pass {
     const x = this._v.x, y = this._v.y;
     this.sunScreen.set(x * 0.5 + 0.5, y * 0.5 + 0.5);
     const off = Math.max(Math.abs(x), Math.abs(y));
-    const screenFade = 1 - smoothstep(1.05, 1.7, off);
+    const screenFade = 1 - smoothstep(1.4, 2.4, off);
     const elev = smoothstep(-0.02, 0.18, this.sunDir.y);
     return this.intensity * this.daylight * screenFade * elev;
   }

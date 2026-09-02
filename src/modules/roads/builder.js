@@ -104,6 +104,16 @@ export class RoadBuilder {
     }
 
     info.kind = 'junction';
+    // through pair: two collinear edges of the same medianed type with every other edge on one side → median runs through
+    info.medianThrough = new Set();
+    for (let i = 0; i < k; i++) for (let j = i + 1; j < k; j++) {
+      const Ei = ends[i], Ej = ends[j];
+      if (Ei.e.type !== Ej.e.type || Ei.L.median <= 0 || Ei.e.oneWay || Ej.e.oneWay) continue;
+      if (Ei.dx * Ej.dx + Ei.dz * Ej.dz > PASS_COS) continue;                 // not collinear
+      const side = (E) => Math.sign(-Ei.dz * E.dx + Ei.dx * E.dz);            // which side of the through line
+      const sides = ends.filter((E) => E !== Ei && E !== Ej).map(side);
+      if (sides.length && sides.every((s) => s === sides[0])) { info.medianThrough.add(Ei.e.id); info.medianThrough.add(Ej.e.id); }
+    }
     // pairs of angularly adjacent edges
     const pairs = [];
     const want = new Map(ends.map((E) => [E.e.id, k >= 3 ? 2 : 1.5]));
@@ -123,8 +133,9 @@ export class RoadBuilder {
       const tj = (Ei.dx * Rz - Ei.dz * Rx) / det;
       const Cx = ni.nx * Ei.A + Ei.dx * ti, Cz = ni.nz * Ei.A + Ei.dz * ti;
       const psi = Math.min(phi, TAU - phi);
-      let r = FILLET_R * Math.min(1.6, Math.max(0.7, Math.min(Ei.A, Ej.A) / 5));
-      if (psi < THREE.MathUtils.degToRad(70)) r *= Math.max(0.35, psi / THREE.MathUtils.degToRad(70));
+      let r = FILLET_R * Math.min(1.5, Math.max(0.7, Math.min(Ei.A, Ej.A) / 5));
+      // acute corners: shrink the radius so the tangent length r/tan(ψ/2) stays sane
+      if (psi < THREE.MathUtils.degToRad(90)) r *= Math.max(0.3, psi / THREE.MathUtils.degToRad(90));
       const f = r / Math.tan(psi / 2);
       pair.flat = false; pair.sI = ti + f; pair.sJ = tj + f; pair.r = r;
       // arc from T_i to T_j around the fillet centre
@@ -285,8 +296,10 @@ export class RoadBuilder {
     // --- median
     if (L.median > 0 && !e.oneWay) {
       const m = L.median;
-      const m0 = (ia?.kind === 'pass' ? s0 : s0 + 5.2), m1 = (ib?.kind === 'pass' ? s1 : s1 - 5.2);
-      if (m1 - m0 > m * 2 + 2) this.buildMedian(G, sp, m0, m1, m, L.medianKind, ia?.kind === 'pass', ib?.kind === 'pass');
+      const thrA = ia?.kind === 'pass' || !!ia?.medianThrough?.has(e.id), thrB = ib?.kind === 'pass' || !!ib?.medianThrough?.has(e.id);
+      const m0 = thrA ? (ia.kind === 'pass' ? s0 : 0) : s0 + (junA ? 4.6 : 1.5);
+      const m1 = thrB ? (ib.kind === 'pass' ? s1 : sp.length) : s1 - (junB ? 4.6 : 1.5);
+      if (m1 - m0 > m * 2 + 2) this.buildMedian(G, sp, m0, m1, m, L.medianKind, thrA, thrB);
     }
     return this.finish(G);
   }

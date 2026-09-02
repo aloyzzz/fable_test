@@ -350,7 +350,7 @@ export default {
       title: 'Maple Street 12', subtitle: 'Residential · Low density · Level 3', zone: 'res-low',
       rows: [['Residents', '14 / 16'], ['Happiness', '82%'], ['Land value', '¤ 3,420'], ['Age', 'Day 4'], ['Services', 'All connected']],
     });
-    S.mouse.x = 1180; S.mouse.y = 640;
+    S.mouse.x = Math.round(window.innerWidth * 0.6); S.mouse.y = Math.round(window.innerHeight * 0.6);
     setCursorHint('Avenue · 96 m · ¤ 3,120');
     S.R.hint.style.transform = `translate(${S.mouse.x + 16}px, ${S.mouse.y + 20}px)`;
     refresh(true);

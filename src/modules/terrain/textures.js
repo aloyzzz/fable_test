@@ -20,7 +20,7 @@ function grassFn(out, x, y, u, v) {
   const fine = fbm(u * T * 64 + 1.3, v * T * 64 + 9.2, 2, 2, 0.5, T * 64);
   const wc = worley(u * 9, v * 9, 9, 3);                             // clover / weed clumps
   const weeds = smoothstep(0.62, 0.3, wc.f1) * smoothstep(0.55, 0.85, wc.id);
-  const lush = [0.11, 0.21, 0.055], mid = [0.16, 0.26, 0.075], yellow = [0.28, 0.30, 0.10], weed = [0.09, 0.17, 0.05];
+  const lush = [0.23, 0.37, 0.12], mid = [0.31, 0.42, 0.155], yellow = [0.47, 0.47, 0.20], weed = [0.19, 0.31, 0.10];
   let c = lerp3(mid, lush, smoothstep(0.35, 0.7, macro));
   c = lerp3(c, yellow, smoothstep(0.55, 0.85, clump) * 0.55);
   c = lerp3(c, weed, weeds * 0.8);
@@ -39,7 +39,7 @@ function grassDryFn(out, x, y, u, v) {
   const fine = fbm(u * T * 64 + 4.3, v * T * 64 + 2.2, 2, 2, 0.5, T * 64);
   const wc = worley(u * 7 + 2, v * 7, 7, 11);
   const bare = smoothstep(0.55, 0.25, wc.f1) * smoothstep(0.6, 0.9, wc.id); // bare earth patches
-  const straw = [0.40, 0.35, 0.15], olive = [0.25, 0.27, 0.10], earth = [0.30, 0.22, 0.13], green = [0.17, 0.25, 0.08];
+  const straw = [0.56, 0.49, 0.23], olive = [0.37, 0.39, 0.16], earth = [0.40, 0.30, 0.18], green = [0.29, 0.37, 0.13];
   let c = lerp3(olive, straw, smoothstep(0.3, 0.7, macro));
   c = lerp3(c, green, smoothstep(0.6, 0.85, clump) * 0.5);
   c = lerp3(c, earth, bare * 0.85);
@@ -57,7 +57,7 @@ function dirtFn(out, x, y, u, v) {
   const pebble = smoothstep(0.42, 0.18, wp.f1) * smoothstep(0.35, 0.65, wp.id);
   const wc = worley(u * 6 + 1, v * 6 + 4, 6, 21);                    // dried mud crack cells
   const crack = 1 - smoothstep(0.02, 0.09, wc.f2 - wc.f1);
-  const brown = [0.30, 0.215, 0.135], dark = [0.19, 0.135, 0.085], pale = [0.42, 0.34, 0.24], stone = [0.36, 0.34, 0.31];
+  const brown = [0.37, 0.27, 0.17], dark = [0.24, 0.17, 0.11], pale = [0.50, 0.42, 0.30], stone = [0.42, 0.40, 0.37];
   let c = lerp3(dark, brown, smoothstep(0.25, 0.75, macro));
   c = lerp3(c, pale, smoothstep(0.55, 0.8, grain) * 0.35);
   c = lerp3(c, stone, pebble * 0.7);
@@ -82,11 +82,11 @@ function rockFn(out, x, y, u, v) {
   const fracture = 1 - smoothstep(0.015, 0.06, wc.f2 - wc.f1);       // fracture lines
   const lichen = smoothstep(0.62, 0.8, fbm(u * T * 3 + 9.9, v * T * 3 + 4.4, 3, 2, 0.5, T * 3));
   const grey = [0.40, 0.385, 0.36], tan = [0.47, 0.41, 0.33], dark = [0.24, 0.23, 0.22], moss = [0.30, 0.34, 0.20];
-  let c = lerp3(grey, tan, bandTone * 0.7);
+  let c = lerp3(grey, tan, bandTone * 0.5);
   c = lerp3(c, dark, smoothstep(0.55, 0.9, rg) * 0.45);
   c = lerp3(c, dark, fracture * 0.55);
   c = lerp3(c, moss, lichen * 0.35);
-  c = scale(c, (0.75 + 0.45 * grain) * (0.7 + 0.35 * terrace));
+  c = scale(c, (0.8 + 0.4 * grain) * (0.82 + 0.2 * terrace));
   out.albedo = c;
   out.height = clamp01(0.25 + 0.4 * terrace + 0.25 * rg + 0.12 * grain - 0.3 * fracture);
   out.rough = 0.72 + 0.15 * grain + 0.1 * fracture - 0.1 * lichen;

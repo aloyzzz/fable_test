@@ -7,7 +7,7 @@ import { Water, REFLECT_LAYER } from './water.js';
 import { makeHeightTexture } from './textures.js';
 
 const S = {
-  ctx: null, mesh: null, material: null, water: null, heightTex: null, bounds: null, skyScan: 0, disposed: false,
+  ctx: null, mesh: null, material: null, water: null, heightTex: null, bounds: null, skyScan: 1, disposed: false,
 };
 
 // ---------- helpers ----------

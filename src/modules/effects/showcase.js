@@ -275,10 +275,12 @@ export function buildShowcase(ctx, rng) {
   ctx.scene.add(group);
 
   // ---- camera: sun near the top edge for the sun-shaft shot
+  const envM = ctx.modules.environment, envLive = !!(envM && envM.status === 'ok' && !envM.def?.stub);
   const { sun } = findStageLights(ctx.scene);
-  const sunDir = sun ? sun.position.clone().normalize() : ctx.clock.sunDirection(new THREE.Vector3());
+  const sunDir = envLive || !sun ? ctx.clock.sunDirection(new THREE.Vector3()) : sun.position.clone().normalize();
   const hx = sunDir.x, hz = sunDir.z, hl = Math.hypot(hx, hz) || 1;
-  const camPitch = 0.42;
+  // pitch the camera so the sun sits ~20° above the view axis (near the top edge of a 45° fov) whatever the hour
+  const camPitch = Math.max(0.15, Math.min(0.95, Math.asin(Math.max(-1, Math.min(1, sunDir.y))) - 0.35));
   const pos = new THREE.Vector3(-14, 3, -30);
   const target = pos.clone().add(new THREE.Vector3((hx / hl) * Math.cos(camPitch), Math.sin(camPitch), (hz / hl) * Math.cos(camPitch)).multiplyScalar(120));
   ctx.rig.lookAt(pos, target);

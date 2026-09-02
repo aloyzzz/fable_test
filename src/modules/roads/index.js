@@ -7,6 +7,7 @@ import { createMaterials, applyWetness } from './materials.js';
 import { layoutOf, laneOffsets, rowHalf, CURB_W } from './layout.js';
 import { buildShowcase } from './showcase.js';
 
+const TAU = Math.PI * 2;
 const S = {
   ctx: null, graph: null, builder: null, mats: null, group: null, meshes: {}, rng: null,
   islands: new Map(), dirty: false, unsub: [], lastRebuildMs: 0,
@@ -160,14 +161,17 @@ const api = {
   route(fromNodeId, toNodeId) { return S.graph.route(nodeIdOf(fromNodeId), nodeIdOf(toNodeId)); },
   routeXZ(ax, az, bx, bz) { return S.graph.routeXZ(ax, az, bx, bz); },
   layoutOf,
-  stats() { return { edges: S.ctx.world.roads.edges.size, nodes: S.ctx.world.roads.nodes.size, lastRebuildMs: +S.lastRebuildMs.toFixed(1) }; },
+  stats() {
+    const tris = {}; let total = 0;
+    for (const k of CATEGORIES) { const n = (S.meshes[k]?.geometry?.index?.count || 0) / 3; tris[k] = n; total += n; }
+    return { edges: S.ctx.world.roads.edges.size, nodes: S.ctx.world.roads.nodes.size, lastRebuildMs: +S.lastRebuildMs.toFixed(1), triangles: total, trianglesByCategory: tris, meshes: CATEGORIES.length };
+  },
   rebuildAll() {
     const g = S.graph; const ids = [...g.edges.keys()], nids = [...g.nodes.keys()];
     S.builder.drop(ids, nids);
     onGraphChanged({ added: ids, removed: [], nodes: nids });
   },
 };
-const TAU = Math.PI * 2;
 
 export default {
   name: 'roads',

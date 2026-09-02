@@ -312,6 +312,7 @@ function onTimeChanged(p) {
 const api = {
   start, play,
   isRunning() { return !!(S && S.running); },
+  suspend() { if (S?.ac && S.ac.state === 'running') { S.ac.suspend().catch(() => { /* noop */ }); S.running = false; } },
   isSupported() { return !!(S && !S.unsupported && (window.AudioContext || window.webkitAudioContext)); },
   setVolume(v) { if (!S) return; S.volume = clamp(Number(v) || 0, 0, 1); applyMaster(S); savePrefs(S); },
   getVolume() { return S ? S.volume : 0; },
@@ -322,6 +323,7 @@ const api = {
   getLayerNames() { return LAYER_DEFS.map((d) => d.name); },
   getSfxNames() { return UI_NAMES.slice(); },
   getAnalysis() { return S ? analysisSnapshot(S) : null; },
+  getStats() { const a = api.getAnalysis(); if (!a) return null; return { running: a.running, context: a.contextState, cpuMs: +a.cpuMs.toFixed(3), masterDb: +a.master.db.toFixed(1), layers: Object.fromEntries(a.layers.map((l) => [l.name, { gain: +l.gain.toFixed(2), db: +l.db.toFixed(1), events: l.events }])) }; },
   getState() { return S ? { running: S.running, muted: S.muted, volume: S.volume, contextState: S.ac ? S.ac.state : 'none', supported: api.isSupported() } : null; },
   showPanel(show = true) {
     if (!S) return; const root = document.getElementById('ui') || document.body;
@@ -344,6 +346,8 @@ export default {
     const unbind = () => { for (const [ev, fn, opt] of s.listeners) window.removeEventListener(ev, fn, opt); s.listeners.length = 0; };
     for (const ev of ['pointerdown', 'keydown', 'touchend']) { const opt = { capture: true, passive: true }; window.addEventListener(ev, gesture, opt); s.listeners.push([ev, gesture, opt]); }
     s.unbind = unbind;
+    const vis = () => { if (!s.ac) return; const hidden = document.visibilityState === 'hidden'; s.nodes.master.gain.setTargetAtTime(hidden || s.muted ? 0 : s.volume * s.volume, s.ac.currentTime, 0.1); };
+    document.addEventListener('visibilitychange', vis); s.listeners2 = [['visibilitychange', vis]];
     s.offs.push(ctx.events.on('time:changed', onTimeChanged));
     s.offs.push(ctx.events.on('weather:changed', () => { computeMix(s); applyMix(s); }));
     s.offs.push(ctx.events.on('buildings:changed', onBuildingsChanged));
@@ -380,6 +384,7 @@ export default {
     const s = S; if (!s) return;
     for (const off of s.offs) off(); s.offs.length = 0;
     s.unbind?.();
+    for (const [ev, fn] of s.listeners2 || []) document.removeEventListener(ev, fn);
     if (s.panel) { s.panel.destroy(); s.panel = null; }
     for (const c of s.crickets) c.stop();
     s.tasks.length = 0;

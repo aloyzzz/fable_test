@@ -32,7 +32,7 @@ vec4 sampleFlat(float layer, vec2 p, float kFar, out vec3 n, out vec2 orm) {
   vec4 oD = texture(tOrm, vec3(uvD, layer));
   vec4 oF = texture(tOrm, vec3(uvF, layer));
   // far-scale albedo modulates the detail (breaks tiling at overview), and replaces it with distance
-  vec3 col = mix(aD.rgb * (0.7 + 0.6 * aF.a), aF.rgb * (0.7 + 0.6 * aD.a), kFar);
+  vec3 col = mix(aD.rgb * (0.85 + 0.3 * aF.a), aF.rgb * (0.85 + 0.3 * aD.a), kFar);
   n = normalize(vec3(nD.xy * (1.0 - 0.8 * kFar) + nF.xy * 0.6, nD.z));
   orm = mix(oD.rg, oF.rg, kFar);
   return vec4(col, mix(aD.a, aF.a, kFar * 0.5));
@@ -75,16 +75,16 @@ const SPLAT = /* glsl */`
 
   // ---- layer weights ----
   float w[6];
-  float rockT = 0.30 + 0.16 * (mid - 0.5) + 0.06 * (fine - 0.5);
-  float rock = smoothstep(rockT - 0.07, rockT + 0.07, slope);
+  float rockT = 0.21 + 0.10 * (mid - 0.5) + 0.04 * (fine - 0.5);
+  float rock = smoothstep(rockT - 0.05, rockT + 0.06, slope);
   rock = max(rock, smoothstep(120.0, 200.0, h) * smoothstep(0.10, 0.22, slope + 0.1 * (nzB.b - 0.5)));
   float sand = smoothstep(uWater + 3.2 + 2.5 * mid, uWater + 0.6, h) * (1.0 - smoothstep(0.18, 0.34, slope));
-  float dirt = smoothstep(0.13, 0.26, slope + 0.08 * (fine - 0.5));
-  dirt = max(dirt, smoothstep(0.66, 0.80, nzB.b + 0.15 * (fine - 0.5)) * 0.85);
+  float dirt = smoothstep(0.11, 0.22, slope + 0.06 * (fine - 0.5)) * 0.85;
+  dirt = max(dirt, smoothstep(0.72, 0.86, nzB.b + 0.15 * (fine - 0.5)) * 0.7);
   dirt = max(dirt, smoothstep(uWater + 6.0 + 3.0 * mid, uWater + 2.5, h) * 0.6);
   float snow = smoothstep(uSnowLine - 12.0 + 24.0 * mid, uSnowLine + 12.0 + 24.0 * mid, h) * (1.0 - smoothstep(0.35, 0.6, slope));
-  float dry = smoothstep(0.32, 0.72, macro + 0.35 * (mid - 0.5) + 0.12 * (fine - 0.5));
-  dry = max(dry, smoothstep(0.20, 0.34, slope) * 0.5);
+  float dry = smoothstep(0.42, 0.80, macro + 0.35 * (mid - 0.5) + 0.12 * (fine - 0.5));
+  dry = max(dry, smoothstep(0.12, 0.24, slope) * 0.6);
   // priority: snow > rock > sand > dirt > grass
   float rem = 1.0;
   w[5] = snow * rem; rem -= w[5];
@@ -104,10 +104,10 @@ const SPLAT = /* glsl */`
     } else { w[i] = 0.0; }
   }
   // ---- height-based blend ----
-  float hk = mix(0.55, 0.15, kFar);
+  float hk = mix(0.30, 0.10, kFar);
   float b[6]; float ma = 0.0;
   for (int i = 0; i < 6; i++) { b[i] = (w[i] > 0.0) ? w[i] + a[i].a * hk : -1.0; ma = max(ma, b[i]); }
-  ma -= mix(0.18, 0.35, kFar);
+  ma -= mix(0.30, 0.40, kFar);
   float bs = 0.0;
   vec3 alb = vec3(0.0); vec3 nTS = vec3(0.0); vec3 nRock = vec3(0.0); vec2 orm = vec2(0.0);
   for (int i = 0; i < 6; i++) {
@@ -122,13 +122,13 @@ const SPLAT = /* glsl */`
   // ---- macro colour variation (breaks tiling at overview): tint by 2 large noises ----
   vec4 nzD = texture2D(tNoise, vWPos.xz / 1700.0 + 0.43);
   float grassy = w[0] + w[1];
-  vec3 tint = mix(vec3(0.80, 0.84, 0.72), vec3(1.14, 1.08, 0.94), nzD.g);
-  tint *= mix(0.86, 1.12, nzA.b);
+  vec3 tint = mix(vec3(0.86, 0.88, 0.80), vec3(1.10, 1.06, 0.96), nzD.g);
+  tint *= mix(0.90, 1.08, nzA.b);
   alb *= mix(vec3(1.0), tint, 0.45 + 0.45 * grassy);
   // damp zones: darker, greener grass in low noisy patches and toward water
   float damp = smoothstep(0.52, 0.70, nzB.r + 0.2 * (fine - 0.5)) * grassy;
   damp = max(damp, smoothstep(uWater + 9.0, uWater + 2.5, h) * grassy * 0.7);
-  alb *= mix(vec3(1.0), vec3(0.62, 0.72, 0.60), damp);
+  alb *= mix(vec3(1.0), vec3(0.70, 0.78, 0.66), damp);
   orm.g = mix(orm.g, 0.95, damp * 0.5);
   // wet band right at the shoreline
   float wet = smoothstep(uWater + 1.8, uWater + 0.2, h) * (1.0 - w[5]);

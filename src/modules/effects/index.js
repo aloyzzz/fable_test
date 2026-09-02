@@ -22,7 +22,7 @@ const goldenFactor = (h) => Math.max(Math.exp(-((h - 7.0) ** 2) / 0.9), Math.exp
 
 const DEFAULTS = {
   bloomStrength: 0.35, bloomRadius: 0.6, bloomThreshold: 1.0,
-  aoIntensity: 1.0, aoRadius: 3.0,
+  aoIntensity: 1.0, aoRadius: 4.0,
   vignette: 0.28, grain: 0.03, aberration: 0.0012, grade: 1.0, saturation: 1.04,
   raysIntensity: 0.55,
 };
@@ -75,7 +75,7 @@ function build() {
     try {
       ao = new GTAOPass(scene, camera, Math.max(1, W >> 1), Math.max(1, H >> 1));
       ao.output = GTAOPass.OUTPUT.Default;
-      ao.updateGtaoMaterial({ radius: S.params.aoRadius, distanceExponent: 1, thickness: 1, distanceFallOff: 1, scale: 1.0, samples: 16, screenSpaceRadius: false });
+      ao.updateGtaoMaterial({ radius: S.params.aoRadius, distanceExponent: 1, thickness: 1, distanceFallOff: 1, scale: 1.25, samples: 16, screenSpaceRadius: false });
       ao.updatePdMaterial({ lumaPhi: 10, depthPhi: 2, normalPhi: 3, radius: 6, radiusExponent: 1, rings: 2, samples: 12 });
       // deterministic denoise noise
       const old = ao.pdNoiseTexture; ao.pdNoiseTexture = makeNoiseTexture(S.rng.fork('gtao-noise')); ao.pdMaterial.uniforms.tNoise.value = ao.pdNoiseTexture; old.dispose();
@@ -99,8 +99,11 @@ function build() {
   P.grade = new ShaderPass(GradeShader); composer.addPass(P.grade);
   P.grade.uniforms.grainSeed.value = S._grainSeed;
   S.composer = composer; S.passes = P;
+  const dbg = S.ctx.params.get('fxdebug');
+  if (dbg === 'ao' && P.ao?.kind === 'gtao') { P.ao.output = GTAOPass.OUTPUT.Denoise; P.bloom.enabled = false; }
   S.passList = ['render', ...(P.ao ? [P.ao.kind + '½'] : []), 'bloom¼', ...(P.rays ? ['rays¼'] : []), 'output(ACES+sRGB)', high ? 'smaa' : 'fxaa', 'grade'];
   applySizes(); applyParams(); applyToggles();
+  if (dbg === 'ao') P.bloom.enabled = false;
   S.logged = false; S.frames = 0; S.cpuAvg = 0;
 }
 
@@ -187,8 +190,11 @@ function driveStage(ctx) {
   L.sun.color.setRGB(lerp(0.55, lerp(1.0, 1.0, golden), day), lerp(0.65, lerp(0.95, 0.72, golden), day), lerp(1.0, lerp(0.88, 0.45, golden), day));
   if (L.hemi) { L.hemi.intensity = lerp(0.16, 1.2, day); L.hemi.color.setRGB(lerp(0.35, 0.62, day), lerp(0.42, 0.77, day), lerp(0.7, 1.0, day)); }
   if (ctx.scene.background?.isColor) ctx.scene.background.setRGB(lerp(0.02, lerp(0.56, 0.72, golden), day), lerp(0.03, lerp(0.71, 0.62, golden), day), lerp(0.07, lerp(0.9, 0.62, golden), day));
+}
+/** Showcase: window/lamp emissives and lamp point lights follow the hour (runs with a live or stub environment). */
+function driveShowcase(ctx) {
   const sc = S.showcase; if (!sc) return;
-  const night = 1 - day;
+  const night = 1 - dayFactor(ctx.clock.hour);
   for (const m of sc.facadeMats) m.emissiveIntensity = lerp(0.08, 4.0, night);
   sc.lampMat.emissiveIntensity = lerp(0, 9, night);
   for (const l of sc.lights) l.intensity = lerp(0, 160, night);
@@ -221,16 +227,16 @@ export default {
   update(dt, ctx) {
     const q = ctx.quality === 'low' ? 'low' : 'high';
     if (q !== S.quality && S.enabled) { S.quality = q; build(); }
-    if (ctx.mode === 'showcase' && ctx.showcaseName === 'effects' && !S.envLive) {
-      if (!S.stageLights) S.stageLights = findStageLights(ctx.scene);
-      driveStage(ctx);
+    if (S.showcase) {
+      driveShowcase(ctx);
+      if (!S.envLive) { if (!S.stageLights) S.stageLights = findStageLights(ctx.scene); driveStage(ctx); }
     }
   },
 
   async showcase(ctx) {
     S.stageLights = findStageLights(ctx.scene);
     S.showcase = buildShowcase(ctx, S.rng.fork('showcase'));
-    driveStage(ctx);
+    driveShowcase(ctx); if (!S.envLive) driveStage(ctx);
     ctx.log('effects: showcase built (towers, alcoves, crates, poles, lamps)');
   },
 
